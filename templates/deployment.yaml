@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ldap-sync
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      service: ldap-sync
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        service: ldap-sync
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: CONFIG_PATH
+              value: /config/config.toml
+            {{- if .Values.extraEnvVars }}
+            {{- tpl (toYaml .Values.extraEnvVars) $ | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: "/config"
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      restartPolicy: Always
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ .Values.secretName }}
